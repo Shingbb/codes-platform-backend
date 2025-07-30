@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: codes-platform-backend
+  profiles:
+    active: local
+server:
+  port: 8083
+  servlet:
+    context-path: /api
+# springdoc-openapi
+springdoc:
+  group-configs:
+    - group: 'default'
+      packages-to-scan: com.shing.codesplatformbackend.controller
+# knife4j
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
