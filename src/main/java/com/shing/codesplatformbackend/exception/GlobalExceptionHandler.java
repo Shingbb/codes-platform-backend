@@ -3,6 +3,7 @@ package com.shing.codesplatformbackend.exception;
 
 import com.shing.codesplatformbackend.common.BaseResponse;
 import com.shing.codesplatformbackend.common.ResultUtils;
+import io.swagger.v3.oas.annotations.Hidden;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  *
  * @author shing
  */
+@Hidden
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
