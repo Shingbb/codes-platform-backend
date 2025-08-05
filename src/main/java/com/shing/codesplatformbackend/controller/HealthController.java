@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
+ * 接口健康测试
+ *
  * @author Shing
  * date 30/7/2025
  */

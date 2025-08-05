@@ -22,9 +22,13 @@ public class SaTokenConfigure implements WebMvcConfigurer {
         registry.addInterceptor(new SaInterceptor(handler -> StpUtil.checkLogin()))
                 .addPathPatterns("/**")
                 .excludePathPatterns(
+                        // 用户模块放行
+                        "/user/**",
+                        // 健康检查接口放行
+                        "/health/**",
                         // knife4j文档地址
                         "/doc.html",
-                        // swagger-ui, 没必要放开
+                        // swagger-ui
                         "/swagger-ui/**",
                         // webjars
                         "/webjars/**",
