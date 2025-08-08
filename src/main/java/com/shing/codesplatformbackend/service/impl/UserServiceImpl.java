@@ -8,9 +8,11 @@ import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.shing.codesplatformbackend.exception.BusinessException;
 import com.shing.codesplatformbackend.exception.ErrorCode;
 import com.shing.codesplatformbackend.mapper.UserMapper;
+import com.shing.codesplatformbackend.model.dto.user.UserQueryRequest;
 import com.shing.codesplatformbackend.model.entity.User;
 import com.shing.codesplatformbackend.model.enums.UserRoleEnum;
 import com.shing.codesplatformbackend.model.vo.LoginUserVO;
+import com.shing.codesplatformbackend.model.vo.UserVO;
 import com.shing.codesplatformbackend.service.UserService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -19,8 +21,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
-import static com.shing.codesplatformbackend.exception.ErrorCode.*;
+import static com.shing.codesplatformbackend.exception.ErrorCode.SYSTEM_ERROR;
 
 /**
  * 用户服务实现类
@@ -138,20 +141,35 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public User getLoginUser() {
         // 先判断是否已登录
         if (!StpUtil.isLogin()) {
-            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "未登录");
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "用户未登录");
         }
         Object userObj = StpUtil.getSession().get("user_login");
         User currentUser = (User) userObj;
         if (currentUser == null || currentUser.getId() == null) {
-            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR,"未登录");
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR,"用户未登录");
         }
         // 从数据库查询（追求性能的话可以注释，直接返回上述结果）
         long userId = currentUser.getId();
         currentUser = this.getById(userId);
         if (currentUser == null) {
-            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR,"未登录");
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR,"用户未登录");
         }
         return currentUser;
+    }
+
+    @Override
+    public UserVO getUserVO(User user) {
+        if (user == null) {
+            return null;
+        }
+        UserVO userVO = new UserVO();
+        BeanUtil.copyProperties(user, userVO);
+        return userVO;
+    }
+
+    @Override
+    public List<UserVO> getUserVOList(List<User> records) {
+        return List.of();
     }
 
     /**
@@ -161,12 +179,34 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public boolean userLogout() {
         if (!StpUtil.isLogin() || StpUtil.getSession().get("user_login") == null) {
-            throw new BusinessException(ErrorCode.OPERATION_ERROR, "未登录");
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "用户未登录");
         }
         // 移除登录态
         StpUtil.logout();
         return true;
     }
+
+    @Override
+    public QueryWrapper getQueryWrapper(UserQueryRequest userQueryRequest) {
+        if (userQueryRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请求参数为空");
+        }
+        Long id = userQueryRequest.getId();
+        String userAccount = userQueryRequest.getUserAccount();
+        String userName = userQueryRequest.getUserName();
+        String userProfile = userQueryRequest.getUserProfile();
+        String userRole = userQueryRequest.getUserRole();
+        String sortField = userQueryRequest.getSortField();
+        String sortOrder = userQueryRequest.getSortOrder();
+        return QueryWrapper.create()
+                .eq("id", id) // where id =${id}
+                .eq("userRole", userRole) // and userRole = ${userRole}
+                .like("userAccount", userAccount)
+                .like("userName", userName)
+                .like("userProfile", userProfile)
+                .orderBy(sortField, "ascend".equals(sortOrder));
+    }
+
 
     /**
      * 对明文密码进行加密处理（使用 BCrypt）
@@ -174,7 +214,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      * @param userPassword 用户密码
      * @return 加密后的密码
      */
-    private String getEncryptPassword(String userPassword) {
+    @Override
+    public String getEncryptPassword(String userPassword) {
         // 使用BCryptPasswordEncoder进行密码加密
         return passwordEncoder.encode(userPassword);
     }
