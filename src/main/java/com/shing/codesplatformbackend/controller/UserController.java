@@ -2,29 +2,21 @@ package com.shing.codesplatformbackend.controller;
 
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.annotation.SaCheckRole;
-import cn.hutool.core.bean.BeanUtil;
 import com.mybatisflex.core.paginate.Page;
 import com.shing.codesplatformbackend.common.BaseResponse;
 import com.shing.codesplatformbackend.common.DeleteRequest;
 import com.shing.codesplatformbackend.common.ResultUtils;
-import com.shing.codesplatformbackend.exception.BusinessException;
 import com.shing.codesplatformbackend.exception.ErrorCode;
 import com.shing.codesplatformbackend.exception.ThrowUtils;
 import com.shing.codesplatformbackend.model.dto.user.*;
+import com.shing.codesplatformbackend.model.entity.User;
 import com.shing.codesplatformbackend.model.vo.LoginUserVO;
 import com.shing.codesplatformbackend.model.vo.UserVO;
+import com.shing.codesplatformbackend.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import com.shing.codesplatformbackend.model.entity.User;
-import com.shing.codesplatformbackend.service.UserService;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -50,13 +42,8 @@ public class UserController {
      */
     @PostMapping("register")
     @Operation(summary = "用户注册")
-    public BaseResponse<Long> register(@RequestBody UserRegisterRequest userRegisterRequest) {
-        ThrowUtils.throwIf(userRegisterRequest == null, ErrorCode.PARAMS_ERROR);
-        String userAccount = userRegisterRequest.getUserAccount();
-        String userPassword = userRegisterRequest.getUserPassword();
-        String checkPassword = userRegisterRequest.getCheckPassword();
-        long result = userService.userRegister(userAccount, userPassword, checkPassword);
-        return ResultUtils.success(result);
+    public BaseResponse<Long> register(@Validated @RequestBody UserRegisterRequest userRegisterRequest) {
+        return ResultUtils.success(userService.userRegister(userRegisterRequest));
     }
 
     /**
@@ -67,12 +54,8 @@ public class UserController {
      */
     @PostMapping("/login")
     @Operation(summary = "用户登录")
-    public BaseResponse<LoginUserVO> userLogin(@RequestBody UserLoginRequest userLoginRequest) {
-        ThrowUtils.throwIf(userLoginRequest == null, ErrorCode.PARAMS_ERROR);
-        String userAccount = userLoginRequest.getUserAccount();
-        String userPassword = userLoginRequest.getUserPassword();
-        LoginUserVO loginUserVO = userService.userLogin(userAccount, userPassword);
-        return ResultUtils.success(loginUserVO);
+    public BaseResponse<LoginUserVO> userLogin(@Validated @RequestBody UserLoginRequest userLoginRequest) {
+        return ResultUtils.success(userService.userLogin(userLoginRequest));
     }
 
     /**
@@ -83,8 +66,7 @@ public class UserController {
     @GetMapping("/get/login")
     @Operation(summary = "获取当前登录用户信息")
     public BaseResponse<LoginUserVO> getLoginUser() {
-        User loginUser = userService.getLoginUser();
-        return ResultUtils.success(userService.getLoginUserVO(loginUser));
+        return ResultUtils.success(userService.getLoginUserVO(userService.getLoginUser()));
     }
 
     /**
@@ -96,8 +78,7 @@ public class UserController {
     @Operation(summary = "用户注销")
     @SaCheckLogin
     public BaseResponse<Boolean> userLogout() {
-        boolean result = userService.userLogout();
-        return ResultUtils.success(result);
+        return ResultUtils.success(userService.userLogout());
     }
 
     /**
@@ -110,16 +91,7 @@ public class UserController {
     @Operation(summary = "添加用户")
     @SaCheckRole("admin")
     public BaseResponse<Long> addUser(@RequestBody UserAddRequest userAddRequest) {
-        ThrowUtils.throwIf(userAddRequest == null, ErrorCode.PARAMS_ERROR);
-        User user = new User();
-        BeanUtil.copyProperties(userAddRequest, user);
-        // 默认密码 12345678
-        final String DEFAULT_PASSWORD = "12345678";
-        String encryptPassword = userService.getEncryptPassword(DEFAULT_PASSWORD);
-        user.setUserPassword(encryptPassword);
-        boolean result = userService.save(user);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
-        return ResultUtils.success(user.getId());
+        return ResultUtils.success(userService.addUser(userAddRequest));
     }
 
     /**
@@ -150,11 +122,7 @@ public class UserController {
     @PostMapping("/delete")
     @SaCheckRole("admin")
     public BaseResponse<Boolean> deleteUser(@RequestBody DeleteRequest deleteRequest) {
-        if (deleteRequest == null || deleteRequest.getId() <= 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR);
-        }
-        boolean b = userService.removeById(deleteRequest.getId());
-        return ResultUtils.success(b);
+        return ResultUtils.success(userService.deleteUserById(deleteRequest.getId()));
     }
 
     /**
@@ -163,14 +131,7 @@ public class UserController {
     @PostMapping("/update")
     @SaCheckRole("admin")
     public BaseResponse<Boolean> updateUser(@RequestBody UserUpdateRequest userUpdateRequest) {
-        if (userUpdateRequest == null || userUpdateRequest.getId() == null) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR);
-        }
-        User user = new User();
-        BeanUtil.copyProperties(userUpdateRequest, user);
-        boolean result = userService.updateById(user);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
-        return ResultUtils.success(true);
+        return ResultUtils.success(userService.updateUser(userUpdateRequest));
     }
 
     /**
@@ -179,18 +140,9 @@ public class UserController {
      * @param userQueryRequest 查询请求参数
      */
     @PostMapping("/list/page/vo")
-    @SaCheckRole("admin")
-    public BaseResponse<Page<UserVO>> listUserVOByPage(@RequestBody UserQueryRequest userQueryRequest) {
-        ThrowUtils.throwIf(userQueryRequest == null, ErrorCode.PARAMS_ERROR);
-        long pageNum = userQueryRequest.getCurrent();
-        long pageSize = userQueryRequest.getPageSize();
-        Page<User> userPage = userService.page(Page.of(pageNum, pageSize),
-                userService.getQueryWrapper(userQueryRequest));
-        // 数据脱敏
-        Page<UserVO> userVOPage = new Page<>(pageNum, pageSize, userPage.getTotalRow());
-        List<UserVO> userVOList = userService.getUserVOList(userPage.getRecords());
-        userVOPage.setRecords(userVOList);
-        return ResultUtils.success(userVOPage);
+    @SaCheckLogin
+    public BaseResponse<Page<UserVO>> listUserVOByPage(@Validated @RequestBody UserQueryRequest userQueryRequest) {
+        return ResultUtils.success(userService.listUserVOByPage(userQueryRequest));
     }
 
 

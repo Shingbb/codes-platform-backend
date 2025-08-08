@@ -2,13 +2,15 @@ package com.shing.codesplatformbackend.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.bean.copier.CopyOptions;
+import cn.hutool.core.text.CharSequenceUtil;
+import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.shing.codesplatformbackend.exception.BusinessException;
 import com.shing.codesplatformbackend.exception.ErrorCode;
 import com.shing.codesplatformbackend.mapper.UserMapper;
-import com.shing.codesplatformbackend.model.dto.user.UserQueryRequest;
+import com.shing.codesplatformbackend.model.dto.user.*;
 import com.shing.codesplatformbackend.model.entity.User;
 import com.shing.codesplatformbackend.model.enums.UserRoleEnum;
 import com.shing.codesplatformbackend.model.vo.LoginUserVO;
@@ -18,9 +20,11 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
 
 import static com.shing.codesplatformbackend.exception.ErrorCode.SYSTEM_ERROR;
@@ -32,6 +36,9 @@ import static com.shing.codesplatformbackend.exception.ErrorCode.SYSTEM_ERROR;
 @Slf4j
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
+    private static final String SESSION_USER_LOGIN = "user_login";
+
+    private static final String ERROR_USER_NOT_LOGIN = "用户未登录";
     /**
      * Spring Security 的 BCrypt 加密算法
      */
@@ -41,25 +48,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     /**
      * 用户注册
      *
-     * @param userAccount   用户账号
-     * @param userPassword  用户密码
-     * @param checkPassword 确认密码
+     * @param userRegisterRequest 用户注册信息
      * @return 用户id
      */
     @Override
-    public long userRegister(String userAccount, String userPassword, String checkPassword) {
+    @Transactional(rollbackFor = Exception.class)
+    public long userRegister(UserRegisterRequest userRegisterRequest) {
+        String userAccount = userRegisterRequest.getUserAccount();
+        String userPassword = userRegisterRequest.getUserPassword();
+        String checkPassword = userRegisterRequest.getCheckPassword();
         // 1. 校验
-        if (StrUtil.hasBlank(userAccount, userPassword, checkPassword)) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
-        }
-        if (userAccount.length() < 4) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户账号过短");
-        }
-        if (userPassword.length() < 8 || checkPassword.length() < 8) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户密码过短");
-        }
         if (!userPassword.equals(checkPassword)) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "两次输入的密码不一致");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "两次密码不一致");
         }
         // 2. 检查是否重复
         QueryWrapper queryWrapper = QueryWrapper.create();
@@ -68,10 +68,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (count > 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号重复");
         }
-
         // 3. 加密
         String encryptPassword = getEncryptPassword(userPassword);
-
         // 4. 插入数据
         User user = new User();
         user.setUserAccount(userAccount);
@@ -87,14 +85,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     /**
      * 用户登录
-     * @param userAccount  用户账户
-     * @param userPassword 用户密码
+     *
+     * @param userLoginRequest 用户登录信息
      * @return 登录用户信息
      */
     @Override
-    public LoginUserVO userLogin(String userAccount, String userPassword) {
+    public LoginUserVO userLogin(UserLoginRequest userLoginRequest) {
+        String userAccount = userLoginRequest.getUserAccount();
+        String userPassword = userLoginRequest.getUserPassword();
+
         // 1. 校验
-        if (StrUtil.hasBlank(userAccount, userPassword)) {
+        if (CharSequenceUtil.hasBlank(userAccount, userPassword)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
         if (userAccount.length() < 4) {
@@ -104,8 +105,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码错误");
         }
         // 2.查询用户是否存在
-        QueryWrapper queryWrapper = new QueryWrapper();
-        queryWrapper.eq("userAccount", userAccount);
+        QueryWrapper queryWrapper = QueryWrapper.create().eq("userAccount", userAccount);
         User user = this.mapper.selectOneByQuery(queryWrapper);
 
         if (user == null || !passwordEncoder.matches(userPassword, user.getUserPassword())) {
@@ -113,14 +113,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         // 4. 登录成功，记录用户的登录态
         StpUtil.login(user.getId());
-        StpUtil.getSession().set("user_login", user);
+        StpUtil.getSession().set(SESSION_USER_LOGIN, user);
         // 5. 获得脱敏后的用户信息
-        return this.getLoginUserVO(user);
+        return getLoginUserVO(user);
     }
 
     /**
      * 获取脱敏后的用户信息
-     * @param user  用户
+     *
+     * @param user 用户
      * @return 脱敏后的用户信息
      */
     @Override
@@ -135,24 +136,25 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     /**
      * 获取当前登录用户
+     *
      * @return 当前登录用户
      */
     @Override
     public User getLoginUser() {
         // 先判断是否已登录
         if (!StpUtil.isLogin()) {
-            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "用户未登录");
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, ERROR_USER_NOT_LOGIN);
         }
-        Object userObj = StpUtil.getSession().get("user_login");
+        Object userObj = StpUtil.getSession().get(SESSION_USER_LOGIN);
         User currentUser = (User) userObj;
         if (currentUser == null || currentUser.getId() == null) {
-            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR,"用户未登录");
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, ERROR_USER_NOT_LOGIN);
         }
         // 从数据库查询（追求性能的话可以注释，直接返回上述结果）
         long userId = currentUser.getId();
         currentUser = this.getById(userId);
         if (currentUser == null) {
-            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR,"用户未登录");
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, ERROR_USER_NOT_LOGIN);
         }
         return currentUser;
     }
@@ -169,17 +171,48 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Override
     public List<UserVO> getUserVOList(List<User> records) {
-        return List.of();
+        if (records == null || records.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return records.stream().map(this::getUserVO).toList();
+    }
+
+    @Override
+    public Long addUser(UserAddRequest userAddRequest) {
+        User user = new User();
+        BeanUtil.copyProperties(userAddRequest, user);
+        String defaultPassword = "12345678";
+        user.setUserPassword(getEncryptPassword(defaultPassword));
+        if (!save(user)) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "添加用户失败");
+        }
+        return user.getId();
+    }
+
+    @Override
+    public Boolean updateUser(UserUpdateRequest userUpdateRequest) {
+        User user = new User();
+        BeanUtil.copyProperties(userUpdateRequest, user, CopyOptions.create().ignoreNullValue());
+        return updateById(user);
+    }
+
+    @Override
+    public Boolean deleteUserById(Long id) {
+        if (id == null || id <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "无效的用户ID");
+        }
+        return removeById(id);
     }
 
     /**
      * 用户注销
+     *
      * @return 是否注销成功
      */
     @Override
     public boolean userLogout() {
-        if (!StpUtil.isLogin() || StpUtil.getSession().get("user_login") == null) {
-            throw new BusinessException(ErrorCode.OPERATION_ERROR, "用户未登录");
+        if (!StpUtil.isLogin() || StpUtil.getSession().get(SESSION_USER_LOGIN) == null) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, ERROR_USER_NOT_LOGIN);
         }
         // 移除登录态
         StpUtil.logout();
@@ -207,6 +240,27 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 .orderBy(sortField, "ascend".equals(sortOrder));
     }
 
+    @Override
+    public Page<UserVO> listUserVOByPage(UserQueryRequest userQueryRequest) {
+        // 从请求中获取分页参数
+        long pageNum = userQueryRequest.getPageNum();
+        long pageSize = userQueryRequest.getPageSize();
+
+        // 调用 MyBatis-Flex 分页查询，传入分页对象和条件构造器
+        Page<User> userPage = this.page(Page.of(pageNum, pageSize), getQueryWrapper(userQueryRequest));
+
+        // 将查询出的 User 实体列表转换成 UserVO 列表
+        List<UserVO> userVOList = getUserVOList(userPage.getRecords());
+
+        // 新建一个 UserVO 类型的分页对象，传入页码、页大小和总记录数
+        Page<UserVO> userVOPage = new Page<>(pageNum, pageSize, userPage.getTotalRow());
+
+        // 设置分页数据记录
+        userVOPage.setRecords(userVOList);
+
+        return userVOPage;
+    }
+
 
     /**
      * 对明文密码进行加密处理（使用 BCrypt）
@@ -222,6 +276,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     /**
      * 对明文密码进行简单加密处理（使用 MD5）
+     *
      * @param userPassword 明文密码
      * @return 密文密码
      */

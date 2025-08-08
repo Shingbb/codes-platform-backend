@@ -1,5 +1,6 @@
 package com.shing.codesplatformbackend.model.dto.user;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.io.Serial;
@@ -14,6 +15,7 @@ public class UserUpdateRequest implements Serializable {
     /**
      * id
      */
+    @NotNull(message = "用户 ID 不能为空")
     private Long id;
 
     /**
@@ -32,7 +34,7 @@ public class UserUpdateRequest implements Serializable {
     private String userProfile;
 
     /**
-     * 用户角色：user/admin
+     * 用户角色：user/admin/ban
      */
     private String userRole;
 

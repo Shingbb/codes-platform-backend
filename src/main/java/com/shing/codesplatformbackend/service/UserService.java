@@ -1,8 +1,9 @@
 package com.shing.codesplatformbackend.service;
 
+import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.service.IService;
-import com.shing.codesplatformbackend.model.dto.user.UserQueryRequest;
+import com.shing.codesplatformbackend.model.dto.user.*;
 import com.shing.codesplatformbackend.model.entity.User;
 import com.shing.codesplatformbackend.model.vo.LoginUserVO;
 import com.shing.codesplatformbackend.model.vo.UserVO;
@@ -16,31 +17,22 @@ import java.util.List;
  */
 public interface UserService extends IService<User> {
 
+    // --- 用户注册、登录相关 ---
+
     /**
      * 用户注册
-     *
-     * @param userAccount   用户账户
-     * @param userPassword  用户密码
-     * @param checkPassword 确认密码
-     * @return 用户id
      */
-    long userRegister(String userAccount, String userPassword, String checkPassword);
+    long userRegister(UserRegisterRequest userRegisterRequest);
 
     /**
      * 用户登录
-     *
-     * @param userAccount  用户账户
-     * @param userPassword 用户密码
-     * @return 脱敏后的用户信息
      */
-    LoginUserVO userLogin(String userAccount, String userPassword);
+    LoginUserVO userLogin(UserLoginRequest userLoginRequest);
 
     /**
-     * 获取脱敏的已登录用户信息
-     *
-     * @return 脱敏后的用户信息
+     * 用户注销
      */
-    LoginUserVO getLoginUserVO(User user);
+    boolean userLogout();
 
     /**
      * 获取当前登录用户
@@ -48,29 +40,54 @@ public interface UserService extends IService<User> {
     User getLoginUser();
 
     /**
-     * 用户注销
-     *
-     * @return 用户注销
+     * 获取脱敏的已登录用户信息
      */
-    boolean userLogout();
+    LoginUserVO getLoginUserVO(User user);
+
+    // --- 用户信息增删改相关 ---
 
     /**
-     * 根据查询条件构造数据查询参数
-     *
-     * @param userQueryRequest 查询条件
-     * @return 查询结果
+     * 新增用户
+     */
+    Long addUser(UserAddRequest userAddRequest);
+
+    /**
+     * 更新用户信息
+     */
+    Boolean updateUser(UserUpdateRequest userUpdateRequest);
+
+    /**
+     * 根据id删除用户
+     */
+    Boolean deleteUserById(Long id);
+
+    // --- 查询相关 ---
+
+    /**
+     * 根据查询条件构造查询参数
      */
     QueryWrapper getQueryWrapper(UserQueryRequest userQueryRequest);
 
     /**
-     * 加密
-     *
-     * @param userPassword 用户密码
-     * @return 加密后的用户密码
+     * 分页查询用户信息
+     */
+    Page<UserVO> listUserVOByPage(UserQueryRequest userQueryRequest);
+
+    /**
+     * 将实体转换为视图对象
+     */
+    UserVO getUserVO(User user);
+
+    /**
+     * 将实体列表转换为视图对象列表
+     */
+    List<UserVO> getUserVOList(List<User> records);
+
+    // --- 密码相关 ---
+
+    /**
+     * 对密码进行加密
      */
     String getEncryptPassword(String userPassword);
 
-    UserVO getUserVO(User user);
-
-    List<UserVO> getUserVOList(List<User> records);
 }

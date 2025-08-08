@@ -1,12 +1,12 @@
 package com.shing.codesplatformbackend.common;
 
 
-
 import com.shing.codesplatformbackend.constant.CommonConstant;
 import lombok.Data;
 
 /**
  * 分页请求
+ *
  * @author shing
  */
 @Data
@@ -15,7 +15,7 @@ public class PageRequest {
     /**
      * 当前页号
      */
-    private int current = 1;
+    private int pageNum = 1;
 
     /**
      * 页面大小
