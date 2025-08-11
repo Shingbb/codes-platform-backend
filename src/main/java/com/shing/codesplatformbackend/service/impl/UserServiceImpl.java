@@ -95,15 +95,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         String userPassword = userLoginRequest.getUserPassword();
 
         // 1. 校验
-        if (CharSequenceUtil.hasBlank(userAccount, userPassword)) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
-        }
-        if (userAccount.length() < 4) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号错误");
-        }
-        if (userPassword.length() < 8) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码错误");
-        }
+        // 在 userLoginRequest 完成入参校验
+
         // 2.查询用户是否存在
         QueryWrapper queryWrapper = QueryWrapper.create().eq("userAccount", userAccount);
         User user = this.mapper.selectOneByQuery(queryWrapper);
