@@ -20,4 +20,11 @@ public class HealthController {
     public BaseResponse<String> healthCheck() {
         return ResultUtils.success("Health Check OK");
     }
+
+    @GetMapping("/i18n")
+    public BaseResponse<String> testI18n() {
+        // 返回一个带国际化消息的响应，使用成功的code和message
+        return ResultUtils.success("This is the payload data");
+    }
+
 }

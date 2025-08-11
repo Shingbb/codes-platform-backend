@@ -4,51 +4,40 @@ import lombok.Getter;
 
 /**
  * 自定义错误码
+ * 错误码范围：
+ * 0 - 成功
+ * 4XXXX - 客户端错误
+ * 5XXXX - 服务器错误
  *
  * @author shing
  */
 @Getter
 public enum ErrorCode {
 
-    /**
-     * 操作成功
-     */
-    SUCCESS(0, "操作成功"),
+    // 成功
+    SUCCESS(0, "success.message"),
 
-    /**
-     * 请求参数错误
-     */
-    PARAMS_ERROR(40000, "请求参数错误"),
+    // 通用客户端错误
+    PARAMS_ERROR(40000, "params.error"),
 
-    /**
-     * 用户未登录
-     */
-    NOT_LOGIN_ERROR(40100, "用户未登录"),
+    INVALID_REQUEST(40001, "invalid.request"),
 
-    /**
-     * 无权限访问
-     */
-    NO_AUTH_ERROR(40101, "无权限访问"),
+    METHOD_NOT_ALLOWED(40500, "method.not.allowed"),
 
-    /**
-     * 请求的数据不存在
-     */
-    NOT_FOUND_ERROR(40400, "请求数据不存在"),
+    NOT_LOGIN_ERROR(40100, "not.login"),
 
-    /**
-     * 禁止访问
-     */
-    FORBIDDEN_ERROR(40300, "禁止访问"),
+    NO_AUTH_ERROR(40101, "no.auth"),
 
-    /**
-     * 系统内部异常
-     */
-    SYSTEM_ERROR(50000, "系统内部异常"),
+    NOT_FOUND_ERROR(40400, "not.found"),
 
-    /**
-     * 操作失败
-     */
-    OPERATION_ERROR(50001, "操作失败");
+    FORBIDDEN_ERROR(40300, "forbidden"),
+
+    // 通用服务端错误
+    SYSTEM_ERROR(50000, "system.error"),
+
+    SERVICE_UNAVAILABLE(50300, "service.unavailable"),
+
+    OPERATION_ERROR(50001, "operation.error");
 
     /**
      * 错误码
@@ -60,17 +49,17 @@ public enum ErrorCode {
      * 错误信息
      * 说明了错误的详细信息，帮助用户或者开发者理解具体的错误原因。
      */
-    private final String message;
+    private final String messageKey;
 
     /**
      * 构造函数，初始化错误码和错误信息
      *
-     * @param code    错误码
-     * @param message 错误信息
+     * @param code       错误码
+     * @param messageKey 错误信息
      */
-    ErrorCode(int code, String message) {
+    ErrorCode(int code, String messageKey) {
         this.code = code;
-        this.message = message;
+        this.messageKey = messageKey;
     }
 
 }
