@@ -8,6 +8,11 @@ package com.shing.codesplatformbackend.exception;
  */
 public class ThrowUtils {
 
+    // 私有构造方法，防止实例化
+    private ThrowUtils() {
+        throw new UnsupportedOperationException("Utility class cannot be instantiated");
+    }
+
     /**
      * 条件成立则抛异常
      *
