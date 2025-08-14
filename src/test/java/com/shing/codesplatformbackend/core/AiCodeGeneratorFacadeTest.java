@@ -5,6 +5,7 @@ import com.shing.codesplatformbackend.model.enums.CodeGenTypeEnum;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
 
 import java.io.File;
 
@@ -21,5 +22,11 @@ class AiCodeGeneratorFacadeTest extends TestBase {
     void generateAndSaveCode() {
         File file = aiCodeGeneratorFacade.generateAndSaveCode("任务记录网站", CodeGenTypeEnum.MULTI_FILE);
         Assertions.assertNotNull(file);
+    }
+
+    @Test
+    void  generateAndSaveCodeStream() {
+        Flux<String> stream = aiCodeGeneratorFacade.generateAndSaveCodeStream("任务记录网站", CodeGenTypeEnum.MULTI_FILE);
+        Assertions.assertNotNull(stream);
     }
 }
