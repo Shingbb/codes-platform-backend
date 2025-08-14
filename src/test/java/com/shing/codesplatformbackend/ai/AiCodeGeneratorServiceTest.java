@@ -2,19 +2,16 @@ package com.shing.codesplatformbackend.ai;
 
 import com.shing.codesplatformbackend.ai.model.HtmlCodeResult;
 import com.shing.codesplatformbackend.ai.model.MultiFileCodeResult;
+import com.shing.codesplatformbackend.common.TestBase;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Profile;
 
 /**
  * @author Shing
  * date 7/8/2025
  */
-@SpringBootTest
-@Profile("local")
-class AiCodeGeneratorServiceTest {
+class AiCodeGeneratorServiceTest extends TestBase {
 
     @Resource
     private AiCodeGeneratorService aiCodeGeneratorService;
