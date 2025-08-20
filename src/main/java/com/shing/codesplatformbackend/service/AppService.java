@@ -2,8 +2,10 @@ package com.shing.codesplatformbackend.service;
 
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.service.IService;
+import com.shing.codesplatformbackend.model.dto.app.AppAddRequest;
 import com.shing.codesplatformbackend.model.dto.app.AppQueryRequest;
 import com.shing.codesplatformbackend.model.entity.App;
+import com.shing.codesplatformbackend.model.entity.User;
 import com.shing.codesplatformbackend.model.vo.AppVO;
 
 /**
@@ -12,6 +14,15 @@ import com.shing.codesplatformbackend.model.vo.AppVO;
  * @author <a href="https://github.com/shingbb">程序员shing</a>
  */
 public interface AppService extends IService<App> {
+
+    /**
+     * 添加 App
+     *
+     * @param appAddRequest App 添加参数
+     * @param loginUser     当前登录用户
+     * @return AppId
+     */
+    long addApp(AppAddRequest appAddRequest, User loginUser);
 
     /**
      * 获取 AppVO

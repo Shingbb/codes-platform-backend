@@ -1,7 +1,7 @@
 package com.shing.codesplatformbackend.controller;
 
-import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.core.text.CharSequenceUtil;
+import cn.dev33.satoken.annotation.SaCheckRole;
+import cn.dev33.satoken.annotation.SaMode;
 import com.mybatisflex.core.paginate.Page;
 import com.shing.codesplatformbackend.common.BaseResponse;
 import com.shing.codesplatformbackend.common.ResultUtils;
@@ -10,11 +10,11 @@ import com.shing.codesplatformbackend.exception.ThrowUtils;
 import com.shing.codesplatformbackend.model.dto.app.AppAddRequest;
 import com.shing.codesplatformbackend.model.entity.App;
 import com.shing.codesplatformbackend.model.entity.User;
-import com.shing.codesplatformbackend.model.enums.CodeGenTypeEnum;
 import com.shing.codesplatformbackend.model.vo.AppVO;
 import com.shing.codesplatformbackend.service.AppService;
 import com.shing.codesplatformbackend.service.UserService;
 import jakarta.annotation.Resource;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -43,31 +43,19 @@ public class AppController {
      * @return 应用 id
      */
     @PostMapping("/add")
-    public BaseResponse<Long> addApp(@RequestBody AppAddRequest appAddRequest) {
-        ThrowUtils.throwIf(appAddRequest == null, ErrorCode.PARAMS_ERROR);
-        // 参数校验
-        String initPrompt = appAddRequest.getInitPrompt();
-        ThrowUtils.throwIf(CharSequenceUtil.isBlank(initPrompt), ErrorCode.PARAMS_ERROR, "初始化 prompt 不能为空");
+    @SaCheckRole(value = {"user", "admin"}, mode = SaMode.OR)
+    public BaseResponse<Long> addApp(@Validated @RequestBody AppAddRequest appAddRequest) {
         // 获取当前登录用户
         User loginUser = userService.getLoginUser();
-        // 构造入库对象
-        App app = new App();
-        BeanUtil.copyProperties(appAddRequest, app);
-        app.setUserId(loginUser.getId());
-        // 应用名称暂时为 initPrompt 前 12 位
-        app.setAppName(initPrompt.substring(0, Math.min(initPrompt.length(), 12)));
-        // 暂时设置为多文件生成
-        app.setCodeGenType(CodeGenTypeEnum.MULTI_FILE.getValue());
-        // 插入数据库
-        boolean result = appService.save(app);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
-        return ResultUtils.success(app.getId());
+        // 交给 service 处理逻辑
+        long appId = appService.addApp(appAddRequest, loginUser);
+        return ResultUtils.success(appId);
     }
 
     /**
      * 根据 id 获取应用详情
      *
-     * @param id      应用 id
+     * @param id 应用 id
      * @return 应用详情
      */
     @GetMapping("/get/vo")
