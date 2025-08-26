@@ -20,13 +20,13 @@ class AiCodeGeneratorFacadeTest extends TestBase {
 
     @Test
     void generateAndSaveCode() {
-        File file = aiCodeGeneratorFacade.generateAndSaveCode("任务记录网站", CodeGenTypeEnum.MULTI_FILE);
+        File file = aiCodeGeneratorFacade.generateAndSaveCode("任务记录网站", CodeGenTypeEnum.MULTI_FILE,315791170555719680L);
         Assertions.assertNotNull(file);
     }
 
     @Test
     void  generateAndSaveCodeStream() {
-        Flux<String> stream = aiCodeGeneratorFacade.generateAndSaveCodeStream("任务记录网站", CodeGenTypeEnum.MULTI_FILE);
+        Flux<String> stream = aiCodeGeneratorFacade.generateAndSaveCodeStream("任务记录网站", CodeGenTypeEnum.MULTI_FILE,315791170555719680L);
         Assertions.assertNotNull(stream);
     }
 }

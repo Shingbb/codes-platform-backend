@@ -89,7 +89,7 @@ public class UserController {
      */
     @PostMapping("/add")
     @Operation(summary = "添加用户")
-    @SaCheckRole("admin")
+    @SaCheckRole(value = "admin")
     public BaseResponse<Long> addUser(@RequestBody UserAddRequest userAddRequest) {
         return ResultUtils.success(userService.addUser(userAddRequest));
     }
@@ -98,7 +98,7 @@ public class UserController {
      * 根据 id 获取用户（仅管理员）
      */
     @GetMapping("/get")
-    @SaCheckRole("admin")
+    @SaCheckRole(value = "admin")
     public BaseResponse<User> getUserById(long id) {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
         User user = userService.getById(id);
@@ -120,7 +120,7 @@ public class UserController {
      * 删除用户
      */
     @PostMapping("/delete")
-    @SaCheckRole("admin")
+    @SaCheckRole(value = "admin")
     public BaseResponse<Boolean> deleteUser(@RequestBody DeleteRequest deleteRequest) {
         return ResultUtils.success(userService.deleteUserById(deleteRequest.getId()));
     }
@@ -129,7 +129,7 @@ public class UserController {
      * 更新用户
      */
     @PostMapping("/update")
-    @SaCheckRole("admin")
+    @SaCheckRole(value = "admin")
     public BaseResponse<Boolean> updateUser(@RequestBody UserUpdateRequest userUpdateRequest) {
         return ResultUtils.success(userService.updateUser(userUpdateRequest));
     }
@@ -140,7 +140,7 @@ public class UserController {
      * @param userQueryRequest 查询请求参数
      */
     @PostMapping("/list/page/vo")
-    @SaCheckLogin
+    @SaCheckRole(value = "admin")
     public BaseResponse<Page<UserVO>> listUserVOByPage(@Validated @RequestBody UserQueryRequest userQueryRequest) {
         return ResultUtils.success(userService.listUserVOByPage(userQueryRequest));
     }

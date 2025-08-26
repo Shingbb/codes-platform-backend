@@ -40,6 +40,11 @@ public interface UserService extends IService<User> {
     User getLoginUser();
 
     /**
+     * 获取当前登录用户
+     */
+    User getLoginUser(String token);
+
+    /**
      * 获取脱敏的已登录用户信息
      */
     LoginUserVO getLoginUserVO(User user);

@@ -3,7 +3,6 @@ package com.shing.codesplatformbackend.service.impl;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.bean.copier.CopyOptions;
-import cn.hutool.core.text.CharSequenceUtil;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
@@ -23,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
 
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
@@ -38,7 +38,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     private static final String SESSION_USER_LOGIN = "user_login";
 
-    private static final String ERROR_USER_NOT_LOGIN = "用户未登录";
     /**
      * Spring Security 的 BCrypt 加密算法
      */
@@ -59,14 +58,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         String checkPassword = userRegisterRequest.getCheckPassword();
         // 1. 校验
         if (!userPassword.equals(checkPassword)) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "两次密码不一致");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "user.password.mismatch");
         }
         // 2. 检查是否重复
         QueryWrapper queryWrapper = QueryWrapper.create();
         queryWrapper.eq(User::getUserAccount, userAccount);
         long count = this.mapper.selectCountByQuery(queryWrapper);
         if (count > 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号重复");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "user.account.duplicate");
         }
         // 3. 加密
         String encryptPassword = getEncryptPassword(userPassword);
@@ -78,7 +77,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setUserRole(UserRoleEnum.USER.getValue());
         boolean saveResult = this.save(user);
         if (!saveResult) {
-            throw new BusinessException(SYSTEM_ERROR, "注册失败，数据库错误");
+            throw new BusinessException(SYSTEM_ERROR, "user.register.failed");
         }
         return user.getId();
     }
@@ -102,11 +101,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         User user = this.mapper.selectOneByQuery(queryWrapper);
 
         if (user == null || !passwordEncoder.matches(userPassword, user.getUserPassword())) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在或密码错误");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "user.not.exists.or.password.error");
         }
         // 4. 登录成功，记录用户的登录态
         StpUtil.login(user.getId());
-        StpUtil.getSession().set(SESSION_USER_LOGIN, user);
+        StpUtil.getTokenSession().set(SESSION_USER_LOGIN, user);
         // 5. 获得脱敏后的用户信息
         return getLoginUserVO(user);
     }
@@ -136,20 +135,36 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public User getLoginUser() {
         // 先判断是否已登录
         if (!StpUtil.isLogin()) {
-            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, ERROR_USER_NOT_LOGIN);
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "not.login");
         }
-        Object userObj = StpUtil.getSession().get(SESSION_USER_LOGIN);
+        Object userObj = StpUtil.getTokenSession().get(SESSION_USER_LOGIN);
         User currentUser = (User) userObj;
         if (currentUser == null || currentUser.getId() == null) {
-            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, ERROR_USER_NOT_LOGIN);
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "not.login");
         }
-        // 从数据库查询（追求性能的话可以注释，直接返回上述结果）
-        long userId = currentUser.getId();
-        currentUser = this.getById(userId);
-        if (currentUser == null) {
-            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, ERROR_USER_NOT_LOGIN);
-        }
+        // 为提高性能，直接从会话中获取用户信息，避免不必要的数据库查询
+        // 只有在需要确保数据是最新的情况下，才取消下面的注释以从数据库查询
+        // long userId = currentUser.getId();
+        // currentUser = this.getById(userId);
+        // if (currentUser == null) {
+        //     throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "not.login");
+        // }
         return currentUser;
+    }
+
+    /**
+     * 获取当前登录用户（传入token）
+     * @param token 用户token
+     * @return 当前登录用户
+     */
+    @Override
+    public User getLoginUser(String token) {
+        // 先判断是否已登录
+        if (!StpUtil.isLogin()) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "not.login");
+        }
+        Object userId = StpUtil.getLoginIdByToken(token);
+        return this.getById((Serializable) userId);
     }
 
     @Override
@@ -172,12 +187,20 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Override
     public Long addUser(UserAddRequest userAddRequest) {
+        // 获取当前登录用户
+        User loginUser = getLoginUser();
+
+        // 校验是否为管理员
+        if (!"admin".equals(loginUser.getUserRole())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
+        }
+
         User user = new User();
         BeanUtil.copyProperties(userAddRequest, user);
         String defaultPassword = "12345678";
         user.setUserPassword(getEncryptPassword(defaultPassword));
         if (!save(user)) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "添加用户失败");
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "user.add.failed");
         }
         return user.getId();
     }
@@ -192,7 +215,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public Boolean deleteUserById(Long id) {
         if (id == null || id <= 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "无效的用户ID");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "user.id.invalid");
         }
         return removeById(id);
     }
@@ -204,8 +227,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      */
     @Override
     public boolean userLogout() {
-        if (!StpUtil.isLogin() || StpUtil.getSession().get(SESSION_USER_LOGIN) == null) {
-            throw new BusinessException(ErrorCode.OPERATION_ERROR, ERROR_USER_NOT_LOGIN);
+        if (!StpUtil.isLogin() || StpUtil.getTokenSession().get(SESSION_USER_LOGIN) == null) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "not.login");
         }
         // 移除登录态
         StpUtil.logout();
@@ -215,7 +238,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public QueryWrapper getQueryWrapper(UserQueryRequest userQueryRequest) {
         if (userQueryRequest == null) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请求参数为空");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "user.request.param.empty");
         }
         Long id = userQueryRequest.getId();
         String userAccount = userQueryRequest.getUserAccount();

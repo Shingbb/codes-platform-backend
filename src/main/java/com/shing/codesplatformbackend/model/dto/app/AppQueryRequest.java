@@ -4,9 +4,11 @@ import com.shing.codesplatformbackend.common.PageRequest;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 /**
+ * 查询请求
  * @author Shing
  * date 14/8/2025
  */
@@ -54,5 +56,6 @@ public class AppQueryRequest  extends PageRequest implements Serializable {
      */
     private Long userId;
 
+    @Serial
     private static final long serialVersionUID = 1L;
 }
