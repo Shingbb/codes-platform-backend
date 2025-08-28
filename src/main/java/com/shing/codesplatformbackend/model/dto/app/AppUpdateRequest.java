@@ -6,6 +6,7 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
+ * 更新应用请求
  * @author Shing
  * date 14/8/2025
  */
