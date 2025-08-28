@@ -199,12 +199,12 @@ public class AppController {
     @Operation(summary = "应用聊天生成代码（流式 SSE）", description = "应用聊天生成代码（流式 SSE）")
     @GetMapping(value = "/chat/gen/code", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @SaCheckLogin
-    public Flux<String> chatToGenCode(@RequestParam Long appId, @RequestParam String message, String token) {
-        // 在包装块内获取登录用户
-        User loginUser = userService.getLoginUser(token);
+    public Flux<String> chatToGenCode(@RequestParam Long appId, @RequestParam String message) {
         // 参数校验
         ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "应用ID无效");
         ThrowUtils.throwIf(CharSequenceUtil.isBlank(message), ErrorCode.PARAMS_ERROR, "用户消息不能为空");
+        // 直接获取登录用户并生成代码
+        User loginUser = userService.getLoginUser();
         // 调用服务生成代码（流式）
         return appService.chatToGenCode(appId, message, loginUser);
     }

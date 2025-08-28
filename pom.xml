@@ -73,16 +73,34 @@
             <artifactId>sa-token-spring-boot3-starter</artifactId>
             <version>1.44.0</version>
         </dependency>
+        <!-- Sa-Token 权限认证（Reactor响应式集成），在线文档：https://sa-token.cc -->
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-reactor-spring-boot3-starter</artifactId>
+            <version>1.44.0</version>
+        </dependency>
+        <!-- Sa-Token 整合 Redis (使用jackson序列化) -->
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-redis-jackson</artifactId>
+            <version>1.44.0</version>
+        </dependency>
+        <!-- Sa-Token 整合 SpringAOP 实现注解鉴权 -->
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-spring-aop</artifactId>
+            <version>1.44.0</version>
+        </dependency>
+        <!-- Sa-Token 整合 jackson -->
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-jackson</artifactId>
+            <version>1.44.0</version>
+        </dependency>
         <!-- 提供Redis连接池 -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-pool2</artifactId>
-        </dependency>
-        <!-- Sa-Token 整合 Fastjson -->
-        <dependency>
-            <groupId>cn.dev33</groupId>
-            <artifactId>sa-token-fastjson</artifactId>
-            <version>1.44.0</version>
         </dependency>
         <!-- 数据库与 ORM -->
         <!-- MyBatis Flex-->
