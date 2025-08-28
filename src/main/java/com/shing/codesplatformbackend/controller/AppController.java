@@ -12,10 +12,7 @@ import com.shing.codesplatformbackend.common.ResultUtils;
 import com.shing.codesplatformbackend.exception.BusinessException;
 import com.shing.codesplatformbackend.exception.ErrorCode;
 import com.shing.codesplatformbackend.exception.ThrowUtils;
-import com.shing.codesplatformbackend.model.dto.app.AppAddRequest;
-import com.shing.codesplatformbackend.model.dto.app.AppAdminUpdateRequest;
-import com.shing.codesplatformbackend.model.dto.app.AppQueryRequest;
-import com.shing.codesplatformbackend.model.dto.app.AppUpdateRequest;
+import com.shing.codesplatformbackend.model.dto.app.*;
 import com.shing.codesplatformbackend.model.entity.App;
 import com.shing.codesplatformbackend.model.entity.User;
 import com.shing.codesplatformbackend.model.vo.AppVO;
@@ -218,6 +215,20 @@ public class AppController {
                             .data(jsonData)
                             .build();
                 });
+    }
+
+    @Operation(summary = "应用部署", description = "应用部署")
+    @PostMapping("deploy")
+    @SaCheckLogin
+    public BaseResponse<String> deploy(@Validated @RequestBody AppDeployRequest appDeployRequest) {
+        ThrowUtils.throwIf(appDeployRequest == null, ErrorCode.PARAMS_ERROR);
+        Long appId = appDeployRequest.getAppId();
+        ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "");
+        // 获取当前登录用户
+        User loginUser = userService.getLoginUser();
+        // 调用服务部署应用
+        String deployUrl = appService.deployApp(appId, loginUser);
+        return ResultUtils.success(deployUrl);
     }
 
     // endregion
